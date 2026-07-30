@@ -1,0 +1,81 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "STM32: Fix USB HID Config",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "${workspaceFolder}/tools/fix_usb_hid.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "STM32: Configure",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "-S",
+        "${workspaceFolder}",
+        "-B",
+        "${workspaceFolder}/build-vscode",
+        "-G",
+        "Ninja",
+        "-DCMAKE_TOOLCHAIN_FILE=${workspaceFolder}/cmake/gcc-arm-none-eabi.cmake",
+        "-DCMAKE_BUILD_TYPE=Debug"
+      ],
+      "options": {
+        "env": {
+          "PATH": "/Applications/STM32CubeIDE.app/Contents/Eclipse/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.14.3.rel1.macos64_1.0.100.202602081740/tools/bin:${env:PATH}"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "STM32: Build",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "--build",
+        "${workspaceFolder}/build-vscode"
+      ],
+      "options": {
+        "env": {
+          "PATH": "/Applications/STM32CubeIDE.app/Contents/Eclipse/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.14.3.rel1.macos64_1.0.100.202602081740/tools/bin:${env:PATH}"
+        }
+      },
+      "dependsOn": [
+        "STM32: Fix USB HID Config",
+        "STM32: Configure"
+      ],
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "STM32: Flash ST-Link",
+      "type": "shell",
+      "command": "/Applications/STM32CubeIDE.app/Contents/Eclipse/plugins/com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.macos64_2.2.400.202601091506/tools/bin/STM32_Programmer_CLI",
+      "args": [
+        "-c",
+        "port=SWD",
+        "freq=100",
+        "mode=UR",
+        "reset=HWrst",
+        "-w",
+        "${workspaceFolder}/build-vscode/kvm_pre.elf",
+        "-v",
+        "-rst"
+      ],
+      "dependsOn": "STM32: Build",
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    }
+  ]
+}
