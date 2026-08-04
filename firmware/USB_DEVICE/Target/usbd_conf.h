@@ -63,7 +63,7 @@
   */
 
 /*---------- -----------*/
-#define USBD_MAX_NUM_INTERFACES     1U
+#define USBD_MAX_NUM_INTERFACES     2U
 /*---------- -----------*/
 #define USBD_MAX_NUM_CONFIGURATION     1U
 /*---------- -----------*/
@@ -75,13 +75,21 @@
 /*---------- -----------*/
 #define USBD_SELF_POWERED     1U
 /*---------- -----------*/
-#define USBD_CUSTOMHID_OUTREPORT_BUF_SIZE     16U
+#define USBD_CUSTOMHID_OUTREPORT_BUF_SIZE     64U
 /*---------- -----------*/
-#define USBD_CUSTOM_HID_REPORT_DESC_SIZE     101U
+#define USBD_CUSTOM_HID_TARGET_REPORT_DESC_SIZE     101U
+/*---------- -----------*/
+#define USBD_CUSTOM_HID_VENDOR_REPORT_DESC_SIZE     29U
+/*---------- -----------*/
+#define USBD_CUSTOM_HID_REPORT_DESC_SIZE     USBD_CUSTOM_HID_TARGET_REPORT_DESC_SIZE
 /*---------- -----------*/
 #define CUSTOM_HID_EPIN_SIZE     16U
 /*---------- -----------*/
-#define CUSTOM_HID_EPOUT_SIZE     16U
+#define CUSTOM_HID_VENDOR_EPIN_ADDR     0x82U
+/*---------- -----------*/
+#define CUSTOM_HID_VENDOR_EPIN_SIZE     64U
+/*---------- -----------*/
+#define CUSTOM_HID_EPOUT_SIZE     64U
 /*---------- -----------*/
 #define CUSTOM_HID_FS_BINTERVAL     0x5U
 /*---------- -----------*/
@@ -92,7 +100,7 @@
 /* #define USBD_CUSTOMHID_OUT_PREPARE_RECEIVE_DISABLED */
 /* #define USBD_CUSTOMHID_EP0_OUT_PREPARE_RECEIVE_DISABLED */
 /* #define USBD_CUSTOMHID_CTRL_REQ_COMPLETE_CALLBACK_ENABLED */
-/* #define USBD_CUSTOMHID_REPORT_BUFFER_EVENT_ENABLED */
+#define USBD_CUSTOMHID_REPORT_BUFFER_EVENT_ENABLED
 
 /****************************************/
 /* #define for FS and HS identification */
@@ -189,4 +197,3 @@ void USBD_static_free(void *p);
 #endif
 
 #endif /* __USBD_CONF__H__ */
-

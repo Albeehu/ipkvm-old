@@ -45,6 +45,8 @@ EndBSPDependencies */
 /* Includes ------------------------------------------------------------------*/
 #include "usbd_customhid.h"
 #include "usbd_ctlreq.h"
+#include "usbd_custom_hid_if.h"
+#include <stdint.h>
 
 
 /** @addtogroup STM32_USB_DEVICE_LIBRARY
@@ -137,11 +139,20 @@ USBD_ClassTypeDef  USBD_CUSTOM_HID =
 /* USB CUSTOM_HID device FS Configuration Descriptor */
 __ALIGN_BEGIN static uint8_t USBD_CUSTOM_HID_CfgDesc[USB_CUSTOM_HID_CONFIG_DESC_SIZ] __ALIGN_END =
 {
+  /* Config descriptor       9
+  Interface 0             9
+  HID descriptor 0        9
+  Endpoint 0x81           7
+  Interface 1             9
+  HID descriptor 1        9
+  Endpoint 0x01           7
+  Endpoint 0x82           7
+  Total                  66*/
   0x09,                                               /* bLength: Configuration Descriptor size */
   USB_DESC_TYPE_CONFIGURATION,                        /* bDescriptorType: Configuration */
   LOBYTE(USB_CUSTOM_HID_CONFIG_DESC_SIZ),             /* wTotalLength: Bytes returned */
   HIBYTE(USB_CUSTOM_HID_CONFIG_DESC_SIZ),
-  0x01,                                               /* bNumInterfaces: 1 interface */
+  0x02,                                               /* bNumInterfaces: 2 interface */
   0x01,                                               /* bConfigurationValue: Configuration value */
   0x00,                                               /* iConfiguration: Index of string descriptor
                                                          describing the configuration */
@@ -158,7 +169,7 @@ __ALIGN_BEGIN static uint8_t USBD_CUSTOM_HID_CfgDesc[USB_CUSTOM_HID_CONFIG_DESC_
   USB_DESC_TYPE_INTERFACE,                            /* bDescriptorType: Interface descriptor type */
   0x00,                                               /* bInterfaceNumber: Number of Interface */
   0x00,                                               /* bAlternateSetting: Alternate setting */
-  0x02,                                               /* bNumEndpoints*/
+  0x01,                                               /* bNumEndpoints*/
   0x03,                                               /* bInterfaceClass: CUSTOM_HID */
   0x00,                                               /* bInterfaceSubClass : 1=BOOT, 0=no boot */
   0x00,                                               /* nInterfaceProtocol : 0=none, 1=keyboard, 2=mouse */
@@ -173,8 +184,8 @@ __ALIGN_BEGIN static uint8_t USBD_CUSTOM_HID_CfgDesc[USB_CUSTOM_HID_CONFIG_DESC_
   0x01,                                               /* bNumDescriptors: Number of CUSTOM_HID class descriptors
                                                          to follow */
   0x22,                                               /* bDescriptorType */
-  LOBYTE(USBD_CUSTOM_HID_REPORT_DESC_SIZE),           /* wItemLength: Total length of Report descriptor */
-  HIBYTE(USBD_CUSTOM_HID_REPORT_DESC_SIZE),
+  LOBYTE(USBD_CUSTOM_HID_TARGET_REPORT_DESC_SIZE),           /* wItemLength: Total length of Report descriptor */
+  HIBYTE(USBD_CUSTOM_HID_TARGET_REPORT_DESC_SIZE),
   /******************** Descriptor of Custom HID endpoints ********************/
   /* 27 */
   0x07,                                               /* bLength: Endpoint Descriptor size */
@@ -187,19 +198,53 @@ __ALIGN_BEGIN static uint8_t USBD_CUSTOM_HID_CfgDesc[USB_CUSTOM_HID_CONFIG_DESC_
   CUSTOM_HID_FS_BINTERVAL,                            /* bInterval: Polling Interval */
   /* 34 */
 
-  0x07,                                               /* bLength: Endpoint Descriptor size */
-  USB_DESC_TYPE_ENDPOINT,                             /* bDescriptorType: */
-  CUSTOM_HID_EPOUT_ADDR,                              /* bEndpointAddress: Endpoint Address (OUT) */
-  0x03,                                               /* bmAttributes: Interrupt endpoint */
-  LOBYTE(CUSTOM_HID_EPOUT_SIZE),                      /* wMaxPacketSize: 2 Bytes max  */
+  /*
+   * Interface 1: Vendor HID
+   * Host command channel
+   */
+  0x09,
+  USB_DESC_TYPE_INTERFACE,
+  0x01,                         /* bInterfaceNumber */
+  0x00,                         /* bAlternateSetting */
+  0x02,                         /* bNumEndpoints: OUT 0x01 + IN 0x82 */
+  0x03,                         /* bInterfaceClass: HID */
+  0x00,                         /* bInterfaceSubClass */
+  0x00,                         /* bInterfaceProtocol */
+  0x00,                         /* iInterface */
+
+  /* HID Descriptor for Interface 1 */
+  0x09,
+  CUSTOM_HID_DESCRIPTOR_TYPE,
+  0x11,
+  0x01,                         /* HID 1.11 */
+  0x00,                         /* bCountryCode */
+  0x01,                         /* bNumDescriptors */
+  0x22,                         /* Report descriptor */
+  LOBYTE(USBD_CUSTOM_HID_VENDOR_REPORT_DESC_SIZE),
+  HIBYTE(USBD_CUSTOM_HID_VENDOR_REPORT_DESC_SIZE),
+
+  /* Endpoint 0x01: Vendor OUT, host -> STM32 */
+  0x07,
+  USB_DESC_TYPE_ENDPOINT,
+  CUSTOM_HID_EPOUT_ADDR,        /* 0x01 */
+  0x03,                         /* Interrupt */
+  LOBYTE(CUSTOM_HID_EPOUT_SIZE),
   HIBYTE(CUSTOM_HID_EPOUT_SIZE),
-  CUSTOM_HID_FS_BINTERVAL,                            /* bInterval: Polling Interval */
-  /* 41 */
+  CUSTOM_HID_FS_BINTERVAL,
+
+  /* Endpoint 0x82: Vendor IN, STM32 -> host */
+  0x07,
+  USB_DESC_TYPE_ENDPOINT,
+  CUSTOM_HID_VENDOR_EPIN_ADDR,  /* 0x82 */
+  0x03,                         /* Interrupt */
+  LOBYTE(CUSTOM_HID_VENDOR_EPIN_SIZE),
+  HIBYTE(CUSTOM_HID_VENDOR_EPIN_SIZE),
+  CUSTOM_HID_FS_BINTERVAL,
 };
 #endif /* USE_USBD_COMPOSITE  */
 
 /* USB CUSTOM_HID device Configuration Descriptor */
-__ALIGN_BEGIN static uint8_t USBD_CUSTOM_HID_Desc[USB_CUSTOM_HID_DESC_SIZ] __ALIGN_END =
+__ALIGN_BEGIN static uint8_t USBD_CUSTOM_HID_TargetDesc[USB_CUSTOM_HID_DESC_SIZ] __ALIGN_END =
 {
   /* 18 */
   0x09,                                               /* bLength: CUSTOM_HID Descriptor size */
@@ -210,8 +255,22 @@ __ALIGN_BEGIN static uint8_t USBD_CUSTOM_HID_Desc[USB_CUSTOM_HID_DESC_SIZ] __ALI
   0x01,                                               /* bNumDescriptors: Number of CUSTOM_HID class descriptors
                                                          to follow */
   0x22,                                               /* bDescriptorType */
-  LOBYTE(USBD_CUSTOM_HID_REPORT_DESC_SIZE),                   /* wItemLength: Total length of Report descriptor */
-  HIBYTE(USBD_CUSTOM_HID_REPORT_DESC_SIZE),
+  LOBYTE(USBD_CUSTOM_HID_TARGET_REPORT_DESC_SIZE),                   /* wItemLength: Total length of Report descriptor */
+  HIBYTE(USBD_CUSTOM_HID_TARGET_REPORT_DESC_SIZE),
+};
+
+__ALIGN_BEGIN static uint8_t USBD_CUSTOM_HID_VendorDesc[USB_CUSTOM_HID_DESC_SIZ] __ALIGN_END =
+{
+  0x09,                                               /* bLength: CUSTOM_HID Descriptor size */
+  CUSTOM_HID_DESCRIPTOR_TYPE,                         /* bDescriptorType: CUSTOM_HID */
+  0x11,                                               /* bCUSTOM_HIDUSTOM_HID: CUSTOM_HID Class Spec release number */
+  0x01,
+  0x00,                                               /* bCountryCode: Hardware target country */
+  0x01,                                               /* bNumDescriptors: Number of CUSTOM_HID class descriptors
+                                                         to follow */
+  0x22,                                               /* bDescriptorType */
+  LOBYTE(USBD_CUSTOM_HID_VENDOR_REPORT_DESC_SIZE),                   /* wItemLength: Total length of Report descriptor */
+  HIBYTE(USBD_CUSTOM_HID_VENDOR_REPORT_DESC_SIZE),
 };
 
 #ifndef USE_USBD_COMPOSITE
@@ -273,11 +332,13 @@ static uint8_t USBD_CUSTOM_HID_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
   if (pdev->dev_speed == USBD_SPEED_HIGH)
   {
     pdev->ep_in[CUSTOMHIDInEpAdd & 0xFU].bInterval = CUSTOM_HID_HS_BINTERVAL;
+    pdev->ep_in[CUSTOM_HID_VENDOR_EPIN_ADDR & 0xFU].bInterval = CUSTOM_HID_HS_BINTERVAL;
     pdev->ep_out[CUSTOMHIDOutEpAdd & 0xFU].bInterval = CUSTOM_HID_HS_BINTERVAL;
   }
   else   /* LOW and FULL-speed endpoints */
   {
     pdev->ep_in[CUSTOMHIDInEpAdd & 0xFU].bInterval = CUSTOM_HID_FS_BINTERVAL;
+    pdev->ep_in[CUSTOM_HID_VENDOR_EPIN_ADDR & 0xFU].bInterval = CUSTOM_HID_FS_BINTERVAL;
     pdev->ep_out[CUSTOMHIDOutEpAdd & 0xFU].bInterval = CUSTOM_HID_FS_BINTERVAL;
   }
 
@@ -286,6 +347,10 @@ static uint8_t USBD_CUSTOM_HID_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
                        CUSTOM_HID_EPIN_SIZE);
 
   pdev->ep_in[CUSTOMHIDInEpAdd & 0xFU].is_used = 1U;
+
+  /* open vendor EP IN */
+  (void)USBD_LL_OpenEP(pdev, CUSTOM_HID_VENDOR_EPIN_ADDR, USBD_EP_TYPE_INTR, CUSTOM_HID_VENDOR_EPIN_SIZE);
+  pdev->ep_in[CUSTOM_HID_VENDOR_EPIN_ADDR & 0xFU].is_used = 1U;
 
   if (USBD_CUSTOMHID_OUTREPORT_BUF_SIZE < CUSTOM_HID_EPOUT_SIZE)
   {
@@ -332,6 +397,11 @@ static uint8_t USBD_CUSTOM_HID_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
   (void)USBD_LL_CloseEP(pdev, CUSTOMHIDInEpAdd);
   pdev->ep_in[CUSTOMHIDInEpAdd & 0xFU].is_used = 0U;
   pdev->ep_in[CUSTOMHIDInEpAdd & 0xFU].bInterval = 0U;
+
+  /* close vendor EP IN*/
+  (void)USBD_LL_CloseEP(pdev, CUSTOM_HID_VENDOR_EPIN_ADDR);
+  pdev->ep_in[CUSTOM_HID_VENDOR_EPIN_ADDR & 0xFU].is_used = 0U;
+  pdev->ep_in[CUSTOM_HID_VENDOR_EPIN_ADDR & 0xFU].bInterval = 0U;
 
   /* Close CUSTOM_HID EP OUT */
   (void)USBD_LL_CloseEP(pdev, CUSTOMHIDOutEpAdd);
@@ -483,24 +553,34 @@ static uint8_t USBD_CUSTOM_HID_Setup(USBD_HandleTypeDef *pdev,
         case USB_REQ_GET_DESCRIPTOR:
           if ((req->wValue >> 8) == CUSTOM_HID_REPORT_DESC)
           {
-            len = MIN(USBD_CUSTOM_HID_REPORT_DESC_SIZE, req->wLength);
-            pbuf = ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData[pdev->classId])->pReport;
-          }
-          else
-          {
-            if ((req->wValue >> 8) == CUSTOM_HID_DESCRIPTOR_TYPE)
-            {
-              pbuf = USBD_CUSTOM_HID_Desc;
-              len = MIN(USB_CUSTOM_HID_DESC_SIZ, req->wLength);
+            uint16_t report_len = 0U;
+            if (LOBYTE(req->wIndex) == 0U) {
+              pbuf = USBD_CUSTOM_HID_GetTargetReportDesc(&report_len);
+            }
+            else if (LOBYTE(req->wIndex) == 1U) {
+              pbuf = USBD_CUSTOM_HID_GetVendorReportDesc(&report_len);
+            }
+            if (pbuf != NULL) {
+              len = MIN(report_len, req->wLength);
             }
           }
-
-          if (pbuf != NULL)
-          {
+          else{
+            if ((req->wValue >> 8) == CUSTOM_HID_DESCRIPTOR_TYPE){
+              if (LOBYTE(req->wIndex) == 0U){
+                pbuf = USBD_CUSTOM_HID_TargetDesc;
+              }
+              else if (LOBYTE(req->wIndex) == 1U) {
+                pbuf = USBD_CUSTOM_HID_VendorDesc;
+              }
+              if (pbuf != NULL) {
+                len = MIN(USB_CUSTOM_HID_DESC_SIZ, req->wLength);
+              }
+            }
+          }
+          if (pbuf != NULL) {
             (void)USBD_CtlSendData(pdev, pbuf, len);
           }
-          else
-          {
+          else{
             USBD_CtlError(pdev, req);
             ret = USBD_FAIL;
           }

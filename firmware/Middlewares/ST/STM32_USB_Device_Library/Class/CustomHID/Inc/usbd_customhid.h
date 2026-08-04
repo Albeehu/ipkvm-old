@@ -42,38 +42,54 @@ extern "C" {
   */
 #ifndef CUSTOM_HID_EPIN_ADDR
 #define CUSTOM_HID_EPIN_ADDR                         0x81U
-#endif /* CUSTOM_HID_EPIN_ADDR */
+#endif
 
 #ifndef CUSTOM_HID_EPIN_SIZE
-#define CUSTOM_HID_EPIN_SIZE                         0x02U
-#endif /* CUSTOM_HID_EPIN_SIZE */
+#define CUSTOM_HID_EPIN_SIZE                         16U
+#endif
 
 #ifndef CUSTOM_HID_EPOUT_ADDR
 #define CUSTOM_HID_EPOUT_ADDR                        0x01U
-#endif /* CUSTOM_HID_EPOUT_ADDR */
+#endif
 
 #ifndef CUSTOM_HID_EPOUT_SIZE
-#define CUSTOM_HID_EPOUT_SIZE                        0x02U
-#endif /* CUSTOM_HID_EPOUT_SIZE*/
+#define CUSTOM_HID_EPOUT_SIZE                        64U
+#endif
 
-#define USB_CUSTOM_HID_CONFIG_DESC_SIZ               41U
+#ifndef CUSTOM_HID_VENDOR_EPIN_ADDR
+#define CUSTOM_HID_VENDOR_EPIN_ADDR                  0x82U
+#endif
+
+#ifndef CUSTOM_HID_VENDOR_EPIN_SIZE
+#define CUSTOM_HID_VENDOR_EPIN_SIZE                  64U
+#endif
+
+#define USB_CUSTOM_HID_CONFIG_DESC_SIZ               66U
 #define USB_CUSTOM_HID_DESC_SIZ                      9U
 
 #ifndef CUSTOM_HID_HS_BINTERVAL
 #define CUSTOM_HID_HS_BINTERVAL                      0x05U
-#endif /* CUSTOM_HID_HS_BINTERVAL */
+#endif
 
 #ifndef CUSTOM_HID_FS_BINTERVAL
 #define CUSTOM_HID_FS_BINTERVAL                      0x05U
-#endif /* CUSTOM_HID_FS_BINTERVAL */
+#endif
 
 #ifndef USBD_CUSTOMHID_OUTREPORT_BUF_SIZE
-#define USBD_CUSTOMHID_OUTREPORT_BUF_SIZE            0x02U
-#endif /* USBD_CUSTOMHID_OUTREPORT_BUF_SIZE */
+#define USBD_CUSTOMHID_OUTREPORT_BUF_SIZE            64U
+#endif
+
+#ifndef USBD_CUSTOM_HID_TARGET_REPORT_DESC_SIZE
+#define USBD_CUSTOM_HID_TARGET_REPORT_DESC_SIZE      101U
+#endif
+
+#ifndef USBD_CUSTOM_HID_VENDOR_REPORT_DESC_SIZE
+#define USBD_CUSTOM_HID_VENDOR_REPORT_DESC_SIZE      29U
+#endif
 
 #ifndef USBD_CUSTOM_HID_REPORT_DESC_SIZE
-#define USBD_CUSTOM_HID_REPORT_DESC_SIZE             163U
-#endif /* USBD_CUSTOM_HID_REPORT_DESC_SIZE */
+#define USBD_CUSTOM_HID_REPORT_DESC_SIZE             USBD_CUSTOM_HID_TARGET_REPORT_DESC_SIZE
+#endif
 
 #define CUSTOM_HID_DESCRIPTOR_TYPE                   0x21U
 #define CUSTOM_HID_REPORT_DESC                       0x22U

@@ -22,6 +22,7 @@
 #ifndef __USBD_CUSTOM_HID_IF_H__
 #define __USBD_CUSTOM_HID_IF_H__
 
+#include <stdint.h>
 #ifdef __cplusplus
  extern "C" {
 #endif
@@ -104,7 +105,10 @@ extern USBD_CUSTOM_HID_ItfTypeDef USBD_CustomHID_fops_FS;
   */
 
 /* USER CODE BEGIN EXPORTED_FUNCTIONS */
+void KVM_ProcessUsbPackets(void);
 
+uint8_t *USBD_CUSTOM_HID_GetTargetReportDesc(uint16_t *length);
+uint8_t *USBD_CUSTOM_HID_GetVendorReportDesc(uint16_t *length);
 /* USER CODE END EXPORTED_FUNCTIONS */
 
 /**

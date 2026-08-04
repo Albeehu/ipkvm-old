@@ -1,14 +1,12 @@
-#ifndef KVM_PROTOCOL_H
-#define KVM_PROTOCOL_H
+// 16-byte packet -> 64-byte packet
+#define KVM_USB_OUT_REPORT_ID 0x10U
+#define KVM_USB_OUT_REPORT_SIZE 64U
+#define KVM_USB_OUT_HEADER_SIZE 5U
+#define KVM_USB_OUT_PAYLOAD_SIZE 59U
 
-#define KVM_PACKET_SIZE      16U
-#define KVM_MAGIC_0          0xA5U
-#define KVM_MAGIC_1          0x5AU
 #define KVM_PROTOCOL_VERSION 0x01U
-#define KVM_END_BYTE         0x0DU
-#define KVM_PAYLOAD_SIZE     8U
 
-#define KVM_TYPE_KEYBOARD    0x01U
-#define KVM_TYPE_MOUSE       0x02U
-
-#endif
+#define KVM_TYPE_KEYBOARD 0x01U
+#define KVM_TYPE_MOUSE 0x02U
+#define KVM_TYPE_RELEASE_ALL 0x03U
+#define KVM_TYPE_PING 0x04U

@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "usb_device.h"
+#include "usbd_custom_hid_if.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -121,6 +122,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    KVM_ProcessUsbPackets();
     if (HAL_GPIO_ReadPin(key_1_GPIO_Port, key_1_Pin) == GPIO_PIN_SET){
       SendCommandS();
       // KVM_HID_SendMouse(0x01, 0, 0, 0, 1000);
