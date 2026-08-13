@@ -34,7 +34,7 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+static uint8_t kvm_status_report[KVM_USB_OUT_REPORT_SIZE];
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -258,30 +258,64 @@ static int8_t CUSTOM_HID_DeInit_FS(void)
   /* USER CODE END 5 */
 }
 
-static void KVM_SendKeyboardToTarget(const uint8_t *payload){
+static uint8_t KVM_SendKeyboardToTarget(const uint8_t *payload){
   uint8_t keys[6] = {0};
   /* copy payload 2-7 to key 0-5 */
   memcpy(keys, &payload[2], 6);
-  (void)KVM_HID_SendKeyboard(payload[0], keys, 10);
+
+  if (!KVM_HID_SendKeyboard(payload[0], keys, 10)) {
+    return (uint8_t)KVM_HID_GetLastStatus();
+  }
+
+  return (uint8_t)KVM_HID_STATUS_OK;
 }
 
 static int16_t KVM_ReadInt16LE(const uint8_t *data){
   return (int16_t)((uint8_t)data[0] | (uint8_t)data[1] << 8);
 }
-static void KVM_SendMouseToTarget(const uint8_t *payload){
+
+static uint8_t KVM_SendMouseToTarget(const uint8_t *payload){
   uint8_t buttons = payload[0];
   int16_t dx = KVM_ReadInt16LE(&payload[1]);
   int16_t dy = KVM_ReadInt16LE(&payload[3]);
   int8_t wheel = (int8_t)payload[5];
 
-  (void)KVM_HID_SendMouse(buttons, dx, dy, wheel, 10);
+  if (!KVM_HID_SendMouse(buttons, dx, dy, wheel, 10)) {
+    return (uint8_t)KVM_HID_GetLastStatus();
+  }
+
+  return (uint8_t)KVM_HID_STATUS_OK;
 }
 
-static void KVM_ReleaseAll(void){
+static uint8_t KVM_ReleaseAll(void){
   uint8_t keys[6] = {0};
+  uint8_t detail = (uint8_t)KVM_HID_STATUS_OK;
 
-  (void) KVM_HID_SendKeyboard(0x00, keys, 10);
-  (void)KVM_HID_SendMouse(0x00, 0, 0, 0, 10);
+  if (!KVM_HID_SendKeyboard(0x00, keys, 10)) {
+    detail = (uint8_t)KVM_HID_GetLastStatus();
+  }
+
+  if (!KVM_HID_SendMouse(0x00, 0, 0, 0, 10)) {
+    if (detail == (uint8_t)KVM_HID_STATUS_OK) {
+      detail = (uint8_t)KVM_HID_GetLastStatus();
+    }
+  }
+
+  return detail;
+}
+
+static void KVM_SendHostStatus(uint8_t request_type, uint8_t sequence, uint8_t status, uint8_t detail){
+  memset(kvm_status_report, 0, sizeof(kvm_status_report));
+  kvm_status_report[0] = KVM_USB_OUT_REPORT_ID;
+  kvm_status_report[1] = KVM_PROTOCOL_VERSION;
+  kvm_status_report[2] = KVM_TYPE_STATUS;
+  kvm_status_report[3] = sequence;
+  kvm_status_report[4] = 3U;
+  kvm_status_report[5] = request_type;
+  kvm_status_report[6] = status;
+  kvm_status_report[7] = detail;
+
+  (void)USBD_CUSTOM_HID_SendVendorReport(&hUsbDeviceFS, kvm_status_report, sizeof(kvm_status_report));
 }
 
 /**
@@ -300,29 +334,76 @@ static void KVM_ParseHostReport(uint8_t *report_buffer){
   if (report_buffer[1] != KVM_PROTOCOL_VERSION) {
     return;
   }
+
   uint8_t message_type = report_buffer[2];
+  uint8_t sequence = report_buffer[3];
   uint8_t payload_length = report_buffer[4];
   const uint8_t *payload = &report_buffer[5];
 
   if (payload_length > KVM_USB_OUT_PAYLOAD_SIZE) {
+    KVM_SendHostStatus(message_type, sequence, KVM_STATUS_BAD_LENGTH, payload_length);
     return;
   }
+
   if (message_type == KVM_TYPE_KEYBOARD) {
-    if (payload_length == 8U){
-      KVM_SendKeyboardToTarget(payload);
+    if (payload_length != 8U){
+      KVM_SendHostStatus(message_type, sequence, KVM_STATUS_BAD_LENGTH, payload_length);
+      return;
     }
+
+    uint8_t detail = KVM_SendKeyboardToTarget(payload);
+    KVM_SendHostStatus(
+      message_type,
+      sequence,
+      detail == (uint8_t)KVM_HID_STATUS_OK ? KVM_STATUS_OK : KVM_STATUS_TARGET_SEND_FAIL,
+      detail
+    );
+    return;
   }
-  else if(message_type == KVM_TYPE_MOUSE){
-    if (payload_length == 7U) {
-      KVM_SendMouseToTarget(payload);
+
+  if (message_type == KVM_TYPE_MOUSE) {
+    if (payload_length != 7U) {
+      KVM_SendHostStatus(message_type, sequence, KVM_STATUS_BAD_LENGTH, payload_length);
+      return;
     }
+
+    uint8_t detail = KVM_SendMouseToTarget(payload);
+    KVM_SendHostStatus(
+      message_type,
+      sequence,
+      detail == (uint8_t)KVM_HID_STATUS_OK ? KVM_STATUS_OK : KVM_STATUS_TARGET_SEND_FAIL,
+      detail
+    );
+    return;
   }
-  else if (message_type == KVM_TYPE_RELEASE_ALL) {
-    KVM_ReleaseAll();
+
+  if (message_type == KVM_TYPE_RELEASE_ALL) {
+    if (payload_length != 0U){
+      KVM_SendHostStatus(message_type, sequence, KVM_STATUS_BAD_LENGTH, payload_length);
+      return;
+    }
+
+    uint8_t detail = KVM_ReleaseAll();
+    KVM_SendHostStatus(
+      message_type,
+      sequence,
+      detail == (uint8_t)KVM_HID_STATUS_OK ? KVM_STATUS_OK : KVM_STATUS_TARGET_SEND_FAIL,
+      detail
+    );
+    return;
   }
-  else if (message_type == KVM_TYPE_PING) {
-  
+
+  if (message_type == KVM_TYPE_PING) {
+    if (payload_length != 0U){
+      KVM_SendHostStatus(message_type, sequence, KVM_STATUS_BAD_LENGTH, payload_length);
+      return;
+    }
+
+    KVM_SendHostStatus(message_type, sequence, KVM_STATUS_OK, 0U);
+    return;
   }
+
+  KVM_SendHostStatus(message_type, sequence, KVM_STATUS_UNKNOWN_TYPE, message_type);
 }
 /* Each packet size = KVM_USB_OUT_REPORT_SIZE = 64 bytes
 
@@ -335,6 +416,9 @@ typedef struct{
 static KvmPacket kvm_queue[KVM_QUEUE_SIZE];
 static volatile uint8_t kvm_write_index = 0;
 static volatile uint8_t kvm_read_index = 0;
+
+
+
 
 static void KVM_QueueHostReport(uint8_t *report_buffer){
   if (report_buffer == NULL){

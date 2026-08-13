@@ -20,6 +20,7 @@
 #ifndef __USB_CUSTOMHID_H
 #define __USB_CUSTOMHID_H
 
+#include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -196,11 +197,14 @@ uint8_t USBD_CUSTOM_HID_SendReport(USBD_HandleTypeDef *pdev,
 #else
 uint8_t USBD_CUSTOM_HID_SendReport(USBD_HandleTypeDef *pdev,
                                    uint8_t *report, uint16_t len);
+/* Announce vendor IN send function */
+uint8_t USBD_CUSTOM_HID_SendVendorReport(USBD_HandleTypeDef *pdev, uint8_t *report, uint16_t len);
 #endif /* USE_USBD_COMPOSITE */
 uint8_t USBD_CUSTOM_HID_ReceivePacket(USBD_HandleTypeDef *pdev);
 
 uint8_t USBD_CUSTOM_HID_RegisterInterface(USBD_HandleTypeDef *pdev,
                                           USBD_CUSTOM_HID_ItfTypeDef *fops);
+
 
 /**
   * @}

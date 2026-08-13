@@ -639,7 +639,7 @@ static uint8_t USBD_CUSTOM_HID_Setup(USBD_HandleTypeDef *pdev,
 #ifdef USE_USBD_COMPOSITE
 uint8_t USBD_CUSTOM_HID_SendReport(USBD_HandleTypeDef *pdev,
                                    uint8_t *report, uint16_t len, uint8_t ClassId)
-{
+
   USBD_CUSTOM_HID_HandleTypeDef *hhid = (USBD_CUSTOM_HID_HandleTypeDef *)pdev->pClassDataCmsit[ClassId];
 #else
 uint8_t USBD_CUSTOM_HID_SendReport(USBD_HandleTypeDef *pdev,
@@ -660,16 +660,34 @@ uint8_t USBD_CUSTOM_HID_SendReport(USBD_HandleTypeDef *pdev,
 
   if (pdev->dev_state == USBD_STATE_CONFIGURED)
   {
-    if (hhid->state == CUSTOM_HID_IDLE)
-    {
-      hhid->state = CUSTOM_HID_BUSY;
+    if (hhid-> state == CUSTOM_HID_IDLE){
+
+      hhid-> state = CUSTOM_HID_BUSY;
+      /* send to 0x82 vendor IN endpoint */
       (void)USBD_LL_Transmit(pdev, CUSTOMHIDInEpAdd, report, len);
     }
-    else
-    {
+    else{
       return (uint8_t)USBD_BUSY;
     }
+  }  
+  return (uint8_t)USBD_OK;
+}  
+
+uint8_t USBD_CUSTOM_HID_SendVendorReport(USBD_HandleTypeDef *pdev, uint8_t *report, uint16_t len){
+  USBD_CUSTOM_HID_HandleTypeDef *hhid = (USBD_CUSTOM_HID_HandleTypeDef *)pdev->pClassDataCmsit[pdev->classId];
+  if (hhid == NULL){
+  return (uint8_t)USBD_FAIL;
   }
+  if (pdev->dev_state != USBD_STATE_CONFIGURED){
+    return (uint8_t)USBD_FAIL;
+  }
+  if (hhid->state != CUSTOM_HID_IDLE){
+    return (uint8_t)USBD_BUSY;
+  }
+  hhid->state = CUSTOM_HID_BUSY;
+  /* 0x82 CUSTOM_HID_VENDOR_EPIN_ADDR */
+  (void)USBD_LL_Transmit(pdev, CUSTOM_HID_VENDOR_EPIN_ADDR, report, len);
+
   return (uint8_t)USBD_OK;
 }
 #ifndef USE_USBD_COMPOSITE
